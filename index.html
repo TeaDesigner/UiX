@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Benchmark de canales de pago · UiX + Banco Azteca</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Inter+Tight:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+
+  :root{
+    --bg: #F5F9F5;
+    --ink: #12160F;
+    --ink-soft: #55604F;
+    --ink-faint: #8A937E;
+    --green-900: #0F3D22;
+    --green-700: #1C8A47;
+    --green-600: #22A857;
+    --green-500: #34C46E;
+    --green-100: #E1F4E6;
+    --green-50: #F1FAF3;
+    --border: #DFE7DC;
+    --hair: #EDF2EB;
+    --white: #FFFFFF;
+    --amber: #A5710D;
+    --amber-bg: #FCF1DD;
+    --amber-bd: #F1DDAF;
+    --red: #B43A2F;
+    --red-bg: #FBEAE7;
+    --red-bd: #F3D3CD;
+    --blue: #3D4A78;
+    --blue-500: #4E5F98;
+    --blue-bg: #EDF0F8;
+    --purple: #7C3FE0;
+    --purple-bg: #F2ECFD;
+    --shadow-sm: none;
+    --shadow-md: none;
+    --shadow-lg: 0 10px 28px rgba(15,40,20,.13);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    overflow:hidden;
+    position:relative;
+  }
+  .display{ font-family:'Inter Tight','Inter',-apple-system,sans-serif; }
+
+
+  /* Lienzo fijo de 1440x900 escalado al viewport: la lámina se ve igual en cualquier pantalla */
+  .deck{ position:relative; z-index:2; width:100%; height:100%; overflow:hidden; }
+  .slide{
+    position:absolute; top:0; left:0;
+    width:1440px; height:900px;
+    transform-origin: 0 0;
+    transform: translate(var(--tx,0px), var(--ty,0px)) scale(var(--k,1));
+    display:none;
+    padding: 30px 46px 74px;
+    flex-direction:column;
+    opacity:0;
+    transition: opacity .35s ease;
+  }
+  .slide.active{ display:flex; opacity:1; }
+  #s-cover{ padding: 52px 66px 95px; }
+
+  @media (prefers-reduced-motion: reduce){ .slide{ transition:none; } }
+
+  .eyebrow{ display:inline-flex; align-items:center; gap:10px; font-size:12px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color: var(--green-700); }
+  .eyebrow::before{ content:""; width:20px; height:2px; background: var(--green-600); display:inline-block; }
+  .h-xl{ font-family:'Inter Tight'; font-weight:800; font-size:68px; line-height:1.02; letter-spacing:-.02em; color:var(--ink); }
+  .h-xl .accent{ color: var(--green-600); }
+  .h-lg{ font-family:'Inter Tight'; font-weight:800; font-size:30px; line-height:1.1; letter-spacing:-.01em; color:var(--ink); }
+  .sub{ font-size:15px; color:var(--ink-soft); line-height:1.55; }
+  .pill{ display:inline-flex; align-items:center; gap:8px; background: var(--white); border:1px solid var(--border); border-radius:3px; padding:8px 14px; font-size:13px; font-weight:600; color:var(--ink-soft); box-shadow: var(--shadow-sm); }
+  .pill.green{ background: var(--green-100); border-color: transparent; color: var(--green-900); }
+
+  /* Lockup UiX + Banco Azteca (mismo archivo embebido para los tres usos) */
+  .brand{ background-image:url(data:image/png;base64,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);
+    background-size:contain; background-repeat:no-repeat; background-position:left center; flex-shrink:0; }
+  .brand.lg{ width:352px; height:31.7px; }
+  .brand.md{ width:232px; height:20.9px; }
+  .brand.sm{ width:172px; height:15.5px; }
+
+  /* pie de lamina: se imprime, a diferencia de la navegacion */
+  .sfoot{ position:absolute; left:46px; right:46px; bottom:27px; display:flex; align-items:flex-end;
+    justify-content:space-between; gap:20px; pointer-events:none; }
+  .sfoot .sf-r{ font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); text-align:right; line-height:1.3; }
+  .sfoot .sf-r em{ font-style:normal; color:var(--green-700); font-size:9px; display:block; }
+
+  /* ================= COVER ================= */
+  #s-cover .cover-wrap{ flex:1; display:flex; flex-direction:column; justify-content:center; gap:20px; max-width:780px; }
+  #s-cover .stat-row{ display:flex; gap:12px; margin-top:6px; flex-wrap:wrap; }
+  #s-cover .stat{ background:var(--white); border:1px solid var(--border); border-radius:8px; padding:13px 17px; box-shadow:var(--shadow-sm); }
+  #s-cover .stat b{ font-family:'Inter Tight'; font-size:22px; display:block; color:var(--green-700); }
+  #s-cover .stat span{ font-size:11px; color:var(--ink-faint); font-weight:600; letter-spacing:.02em; }
+  #s-cover .phone{ position:absolute; right:88px; top:50%; transform:translateY(-50%); width:300px; height:610px; background:#0C0F0A; border-radius:44px; padding:13px; box-shadow: var(--shadow-lg); }
+  #s-cover .phone-screen{ width:100%; height:100%; background:var(--white); border-radius:33px; overflow:hidden; position:relative; padding:22px 18px; }
+  #s-cover .phone-status{ display:flex; justify-content:space-between; font-size:12px; font-weight:600; color:var(--ink); margin-bottom:16px;}
+  #s-cover .phone-h1{ font-family:'Inter Tight'; font-weight:800; font-size:19px; margin-bottom:4px;}
+  #s-cover .phone-sub{ font-size:11.5px; color:var(--ink-soft); margin-bottom:14px;}
+  #s-cover .pm{ display:flex; align-items:center; gap:11px; border:1px solid var(--border); border-radius:6px; padding:11px 12px; margin-bottom:9px; }
+  #s-cover .pm.sel{ border-color:var(--green-500); background:var(--green-50); }
+  #s-cover .pm b{ font-size:11.5px; display:block; font-weight:700; }
+  #s-cover .pm span{ font-size:10px; color:var(--ink-faint); }
+  #s-cover .pm .rd{ margin-left:auto; width:16px; height:16px; border-radius:50%; border:1.5px solid var(--border); flex-shrink:0; }
+  #s-cover .pm.sel .rd{ border-color:var(--green-600); background:var(--green-600); box-shadow:inset 0 0 0 3px #fff; }
+  #s-cover .amt{ border-top:1px solid var(--border); margin-top:13px; padding-top:11px; }
+  #s-cover .total-row{ display:flex; justify-content:space-between; font-size:11.5px; padding:4px 0; color:var(--ink-soft);}
+  #s-cover .total-row b{ color:var(--ink); font-weight:700;}
+  #s-cover .big-price{ font-family:'Inter Tight'; font-weight:800; font-size:22px; margin-top:4px;}
+  #s-cover .cta{ margin-top:13px; background:var(--green-600); color:#fff; text-align:center; padding:12px; border-radius:4px; font-weight:700; font-size:13.5px;}
+  #s-cover .fineprint{ margin-top:10px; font-size:9.5px; color:var(--ink-faint); text-align:center; line-height:1.4; }
+
+  /* ================= INDEX ================= */
+  .index-wrap{ flex:1; display:grid; grid-template-columns:repeat(3,1fr); gap:22px; align-content:center; }
+  .idx-col h5{ font-size:10px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--green-700); margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+  .idx-col h5::after{ content:""; flex:1; height:1px; background:var(--border); }
+  .index-item{ display:flex; align-items:center; gap:13px; padding:11px 14px; border:1px solid var(--border); border-radius:6px; background:var(--white); box-shadow:var(--shadow-sm); cursor:pointer; margin-bottom:8px; transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
+  .index-item:hover{ border-color: var(--green-600); background:var(--green-50); }
+  .index-item.ours{ border-color:var(--green-500); background:var(--green-50); }
+  .index-num{ font-family:'Inter Tight'; font-weight:800; font-size:12px; color:var(--white); width:27px; height:27px; border-radius:4px; background:var(--green-600); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .index-item.ours .index-num{ background:var(--green-900); }
+  .index-label{ font-family:'Inter Tight'; font-weight:700; font-size:14px; color:var(--ink); }
+  .index-desc{ font-size:10.5px; color:var(--ink-faint); margin-top:1px; }
+  .index-arrow{ margin-left:auto; color:var(--green-600); font-size:14px; opacity:0; transition:opacity .15s ease, transform .15s ease; }
+  .index-item:hover .index-arrow{ opacity:1; transform:translateX(2px); }
+
+  /* ================= HEAD OF ENTITY SLIDES ================= */
+  .ent-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:28px; margin-bottom:10px; flex-shrink:0; }
+  .ent-title-row{ display:flex; align-items:center; gap:13px; }
+  .ent-logo{ width:40px; height:40px; border-radius:3px; background:var(--green-900); color:#fff; font-family:'Inter Tight'; font-weight:800; font-size:15.5px; letter-spacing:-.01em; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .ent-head .sub{ font-size:12.8px; max-width:580px; text-align:right; line-height:1.5; }
+  .ent-meta{ display:flex; gap:7px; margin-top:7px; justify-content:flex-end; flex-wrap:wrap; }
+  .mtag{ font-size:9.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; padding:4px 9px; border-radius:3px; background:var(--white); border:1px solid var(--border); color:var(--ink-soft); }
+  .mtag.own{ background:var(--green-100); border-color:transparent; color:var(--green-900); }
+  .mtag.warn{ background:var(--amber-bg); border-color:var(--amber-bd); color:var(--amber); }
+  .mtag.bad{ background:var(--red-bg); border-color:var(--red-bd); color:var(--red); }
+
+  /* ================= SPEC TABLE (ficha de canal) ================= */
+  .spec-wrap{ flex:0 0 auto; display:flex; flex-direction:column; }
+  table.spec{ width:100%; border-collapse:separate; border-spacing:0; background:var(--white); border:1px solid var(--border); border-radius:8px; overflow:hidden; box-shadow:var(--shadow-md); table-layout:fixed; }
+  table.spec th{ text-align:left; font-size:10px; font-weight:800; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-faint); padding:9px 12px; background:var(--green-50); border-bottom:1px solid var(--border); }
+  table.spec th .rl{ display:flex; align-items:center; gap:7px; }
+  table.spec th .rn{ font-size:12px; font-family:'Inter Tight'; font-weight:800; letter-spacing:-.01em; text-transform:none; }
+  table.spec th.r1{ background:var(--green-100); color:var(--green-900); }
+  table.spec th.r2{ background:var(--blue-bg); color:var(--blue); }
+  table.spec td{ padding:4px 11px; border-bottom:1px solid var(--hair); font-size:10.9px; line-height:1.4; vertical-align:top; color:var(--ink); }
+  table.spec tr:last-child td{ border-bottom:none; }
+  td.stage{ width:30px; padding:0; background:var(--green-50); border-right:1px solid var(--border); text-align:center; }
+  td.stage .vt{ writing-mode:vertical-rl; transform:rotate(180deg); font-size:9px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; color:var(--green-700); margin:0 auto; padding:12px 0; white-space:nowrap; }
+  td.k{ font-weight:700; font-size:10.4px; color:var(--ink); background:#FCFDFC; border-right:1px solid var(--hair); }
+  td.k i{ display:block; font-style:normal; font-weight:500; color:var(--ink-faint); font-size:9.4px; margin-top:2px; letter-spacing:.02em; }
+  td.r2c{ background:#FBFCFE; }
+  .f-list{ list-style:none; margin-top:3px; }
+  .f-list li{ padding-left:11px; position:relative; color:var(--ink-soft); font-size:10.3px; line-height:1.36; margin-top:0; }
+  .f-list li::before{ content:""; position:absolute; left:1px; top:6px; width:4px; height:4px; border-radius:50%; background:var(--green-500); }
+  td.r2c .f-list li::before{ background:var(--blue-500); }
+  .f-list.num{ counter-reset:fl; }
+  .f-list.num li{ padding-left:16px; }
+  .f-list.num li::before{ counter-increment:fl; content:counter(fl); width:auto; height:auto; background:none; color:var(--green-700); font-weight:800; font-size:8.5px; top:1px; left:2px; }
+  .n{ display:block; color:var(--ink-faint); font-weight:500; font-size:9.8px; margin-top:2px; line-height:1.38; }
+  .cnt{ display:inline-block; background:var(--green-100); color:var(--green-900); font-weight:800; font-size:10px; padding:1px 6px; border-radius:3px; margin-right:5px; vertical-align:1px; }
+  td.r2c .cnt{ background:var(--blue-bg); color:var(--blue); }
+  .pend{ display:inline-block; background:var(--amber-bg); border:1px solid var(--amber-bd); color:var(--amber); font-weight:800; font-size:8.5px; letter-spacing:.06em; text-transform:uppercase; padding:1px 5px; border-radius:3px; margin-left:5px; vertical-align:1px; }
+  .src{ display:inline-block; background:#F2F4F1; color:var(--ink-faint); font-weight:700; font-size:8.5px; letter-spacing:.05em; text-transform:uppercase; padding:1px 5px; border-radius:3px; margin-left:5px; vertical-align:1px; }
+
+  /* muro: rol sin ruta de pago */
+  td.wall{ background: repeating-linear-gradient(135deg, #FCEEEB, #FCEEEB 7px, #F8E0DB 7px, #F8E0DB 14px); vertical-align:middle; padding:14px 18px; }
+  td.wall .wl{ display:inline-flex; align-items:center; gap:7px; font-size:9px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--red); background:#fff; border:1px solid var(--red-bd); padding:4px 9px; border-radius:2px; }
+  td.wall h4{ font-family:'Inter Tight'; font-weight:800; font-size:16px; margin:9px 0 6px; color:#7A2E25; line-height:1.15; }
+  td.wall p{ font-size:10.2px; color:#7A2E25; line-height:1.5; max-width:96%; }
+  td.wall .kyc{ margin-top:10px; background:#fff; border:1px solid var(--red-bd); border-radius:6px; padding:10px 12px; }
+  td.wall .kyc b{ font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--red); }
+  td.wall .kyc .f-list li{ color:#7A2E25; }
+  td.wall .kyc .f-list li::before{ background:var(--red); }
+
+  /* paridad de rol */
+  td.same{ background:var(--green-50); vertical-align:middle; text-align:center; }
+  td.same .eq{ font-family:'Inter Tight'; font-weight:800; font-size:26px; color:var(--green-500); line-height:1; }
+  td.same b{ display:block; font-family:'Inter Tight'; font-size:12.5px; margin:6px 0 4px; color:var(--green-900); }
+  td.same p{ font-size:9.8px; color:var(--ink-soft); line-height:1.45; max-width:88%; margin:0 auto; }
+
+  .painpoint-banner{ margin-top:9px; background:var(--red-bg); border:1px solid var(--red-bd); border-radius:3px; padding:9px 16px; display:flex; gap:14px; align-items:flex-start; flex-shrink:0; }
+  .painpoint-banner .plabel{ flex-shrink:0; font-size:9px; font-weight:800; letter-spacing:.11em; text-transform:uppercase; color:var(--red); line-height:1.35; border-right:1px solid var(--red-bd); padding-right:14px; align-self:center; }
+  .painpoint-banner .ptext{ font-size:11.9px; color:#7A2E25; line-height:1.5; }
+  .painpoint-banner .ptext b{ color:var(--red); font-weight:800; }
+  .foot{ margin-top:7px; font-size:9.9px; color:var(--ink-faint); line-height:1.5; flex-shrink:0; }
+  .foot b{ color:var(--ink-soft); font-weight:700; }
+
+  /* ================= HALLAZGOS ================= */
+  .findings{ flex:1; min-height:0; display:grid; grid-template-rows:auto 1fr auto; gap:12px; }
+  .metrics{ display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
+  .metric{ background:none; border:none; border-top:2px solid var(--ink); border-radius:0; padding:9px 12px 0 0; }
+  .metric .lb{ font-size:9.2px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); }
+  .metric .vl{ font-family:'Inter Tight'; font-weight:800; font-size:19px; margin:3px 0 5px; letter-spacing:-.015em; line-height:1.08; }
+  .metric .dt{ font-size:10.6px; color:var(--ink-soft); line-height:1.45; }
+  .metric.b .vl{ color:var(--blue); }
+  .metric.a .vl{ color:var(--amber); }
+  .metric.r .vl{ color:var(--red); }
+  .verdict{ background:var(--white); border:1px solid var(--border); border-radius:4px; padding:15px 19px; display:grid; grid-template-columns:1fr 250px; gap:22px; align-items:start; }
+  .verdict .vh{ display:flex; align-items:center; gap:10px; margin-bottom:9px; padding-bottom:8px; border-bottom:1px solid var(--hair); }
+  .verdict .vh b{ font-family:'Inter Tight'; font-size:13.5px; }
+  .verdict p{ font-size:11.8px; line-height:1.55; color:var(--ink-soft); }
+  .verdict p + p{ margin-top:5px; }
+  .verdict p b{ color:var(--ink); font-weight:700; }
+  .gauges{ border-left:1px solid var(--hair); padding-left:20px; }
+  .gauge{ margin-bottom:11px; }
+  .gauge:last-child{ margin-bottom:0; }
+  .gauge .gl{ font-size:9px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint); margin-bottom:5px; }
+  .gauge .gv{ font-size:10.5px; font-weight:700; color:var(--ink); margin-top:4px; }
+  .meter{ display:inline-flex; gap:3px; }
+  .meter i{ width:100%; min-width:13px; height:7px; border-radius:3px; background:var(--hair); border:1px solid var(--border); }
+  .meter i.on{ background:var(--green-600); border-color:var(--green-600); }
+  .meter.warn i.on{ background:var(--amber); border-color:var(--amber); }
+  .meter.bad i.on{ background:var(--red); border-color:var(--red); }
+  .fric{ display:inline-flex; align-items:center; gap:6px; font-size:9.4px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; padding:4px 9px; border-radius:2px; }
+  .fric.hi{ background:var(--red-bg); color:var(--red);} .fric.md{ background:var(--amber-bg); color:var(--amber);} .fric.lo{ background:var(--green-100); color:var(--green-900);}
+
+  /* ================= ESCALERA DE NEGOCIACIÓN (PAX) ================= */
+  .ladder{ display:flex; flex-direction:column; gap:7px; }
+  .rung{ background:var(--white); border:1px solid var(--border); border-radius:6px; padding:9px 12px; box-shadow:var(--shadow-sm); position:relative; }
+  .rung .rh{ display:flex; align-items:center; gap:8px; margin-bottom:3px; }
+  .rung .n{ width:19px; height:19px; border-radius:3px; background:var(--green-600); color:#fff; font-size:9.5px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .rung b{ font-family:'Inter Tight'; font-size:11.8px; }
+  .rung p{ font-size:10px; color:var(--ink-soft); line-height:1.42; }
+  .rung.l1{ margin-right:33%; } .rung.l2{ margin-right:22%; margin-left:4%; }
+  .rung.l3{ margin-right:11%; margin-left:8%; } .rung.l4{ margin-left:12%; }
+  .rung.l1 .n{ background:var(--green-500); } .rung.l3 .n{ background:var(--amber); } .rung.l4 .n{ background:var(--red); }
+  .ladder-axis{ display:flex; justify-content:space-between; font-size:8.8px; font-weight:800; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-faint); margin-bottom:7px; }
+
+  /* ================= FLUJO POR ROL ================= */
+  .flowbox{ background:var(--white); border:1px solid var(--border); border-radius:8px; padding:15px 17px; box-shadow:var(--shadow-md); }
+  .flowbox + .flowbox{ margin-top:11px; }
+  .flowbox .fh{ display:flex; align-items:center; gap:9px; margin-bottom:11px; }
+  .flowbox .fh .tag{ font-size:9.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; padding:4px 9px; border-radius:3px; background:var(--green-100); color:var(--green-900); }
+  .flowbox.r2 .fh .tag{ background:var(--blue-bg); color:var(--blue); }
+  .flowbox .fh b{ font-family:'Inter Tight'; font-size:13px; }
+  .flowbox .fh .fnote{ margin-left:auto; font-size:10px; color:var(--ink-faint); }
+  .flowline{ display:flex; align-items:stretch; gap:5px; flex-wrap:wrap; }
+  .fstep{ background:#FCFDFC; border:1px solid var(--border); border-radius:4px; padding:7px 10px; font-size:10px; font-weight:600; display:flex; flex-direction:column; gap:2px; min-width:0; flex:1; }
+  .fstep .si{ font-size:9px; font-weight:800; letter-spacing:.1em; color:var(--ink-faint); line-height:1; }
+  .fstep b{ font-size:10.3px; font-weight:700; line-height:1.25; }
+  .fstep span{ font-size:9.2px; color:var(--ink-faint); font-weight:500; line-height:1.3; }
+  .fstep.hl{ border-color:var(--green-500); background:var(--green-50); box-shadow:0 0 0 3px rgba(52,196,110,.1); }
+  .fstep.skip{ border-style:dashed; background:transparent; opacity:.75; }
+  .fstep.skip b{ color:var(--ink-faint); text-decoration:line-through; }
+  .farrow{ color:var(--green-500); font-size:11px; display:flex; align-items:center; flex:0 0 auto; }
+
+  /* ================= TARJETAS DE MÉTODO ================= */
+  .mcards{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+  .mcard{ background:var(--white); border:1px solid var(--border); border-radius:8px; padding:14px 16px; box-shadow:var(--shadow-md); display:flex; flex-direction:column; gap:8px; }
+  .mcard .mh{ display:flex; align-items:center; gap:9px; }
+  .mcard .mh b{ font-family:'Inter Tight'; font-size:13px; }
+  .mcard .mh .u{ margin-left:auto; font-size:8.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--green-700); background:var(--green-100); padding:3px 7px; border-radius:3px; }
+  .mcard p{ font-size:10.4px; color:var(--ink-soft); line-height:1.48; }
+
+  /* ================= MAPEO PAINPOINT -> SOLUCIÓN ================= */
+  .map-row{ flex:1; display:grid; grid-template-columns:repeat(4,1fr); gap:12px; align-content:center; min-height:0; }
+  .map-card{ background:var(--white); border:1px solid var(--border); border-radius:8px; box-shadow:var(--shadow-md); padding:15px 16px; display:flex; flex-direction:column; gap:9px; }
+  .map-card .who{ display:flex; align-items:center; gap:9px; }
+  .map-card .who .ico{ width:25px; height:25px; border-radius:3px; background:var(--ink); color:#fff; font-family:'Inter Tight'; font-weight:800; font-size:10.5px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .map-card .who b{ font-family:'Inter Tight'; font-size:12.5px; line-height:1.15; }
+  .map-block{ background:var(--red-bg); border-radius:4px; padding:9px 11px; }
+  .map-block.sol{ background:var(--green-50); border:1px solid var(--green-100); }
+  .map-block .lbl{ font-size:8.8px; font-weight:800; letter-spacing:.09em; text-transform:uppercase; margin-bottom:3px; }
+  .map-block.pain .lbl{ color:var(--red); }
+  .map-block.sol .lbl{ color:var(--green-700); }
+  .map-block p{ font-size:10.3px; line-height:1.45; color:var(--ink); }
+  .map-block .ev{ display:block; margin-top:5px; font-size:9.3px; color:var(--ink-faint); }
+  .map-arrow{ text-align:center; color:var(--green-500); font-size:14px; line-height:.6; }
+  .claim{ margin-top:12px; background:var(--green-900); color:#fff; border-radius:4px; padding:14px 20px; display:flex; align-items:center; gap:18px; flex-shrink:0; }
+  .claim .cn{ font-family:'Inter Tight'; font-weight:800; font-size:23px; color:#fff; line-height:1.05; flex-shrink:0; border-right:1px solid rgba(255,255,255,.22); padding-right:18px; letter-spacing:-.02em; }
+  .claim p{ font-size:12px; line-height:1.5; color:#DDEEE2; }
+  .claim p b{ color:#fff; font-weight:700; }
+
+  /* ================= COBERTURA ÚNICA / TRADE-OFFS ================= */
+  .two-col{ flex:1; display:grid; grid-template-columns:1.15fr .85fr; gap:16px; min-height:0; }
+  .col-head{ display:flex; align-items:center; gap:9px; margin-bottom:10px; }
+  .col-head b{ font-family:'Inter Tight'; font-size:14px; }
+  .col-head .cx{ font-size:9px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; padding:3px 8px; border-radius:3px; }
+  .col-head .cx.g{ background:var(--green-100); color:var(--green-900); }
+  .col-head .cx.a{ background:var(--amber-bg); color:var(--amber); }
+  .ucards{ display:grid; grid-template-columns:1fr 1fr; gap:11px; }
+  .ucard{ background:var(--white); border:1px solid var(--border); border-radius:6px; padding:13px 15px; box-shadow:var(--shadow-sm); }
+  .ucard .uh{ display:flex; align-items:center; gap:8px; margin-bottom:5px; }
+  .ucard .uh b{ font-family:'Inter Tight'; font-size:12.2px; line-height:1.2; }
+  .ucard p{ font-size:10.2px; color:var(--ink-soft); line-height:1.48; }
+  .ucard .only{ display:inline-block; margin-top:7px; font-size:8.6px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; background:var(--green-900); color:#fff; padding:3px 7px; border-radius:3px; }
+  .risks{ background:var(--white); border:1px solid var(--border); border-radius:8px; padding:14px 16px; box-shadow:var(--shadow-sm); }
+  .risk{ padding:9px 0; border-bottom:1px solid var(--hair); }
+  .risk:last-child{ border-bottom:none; padding-bottom:0; }
+  .risk:first-child{ padding-top:0; }
+  .risk b{ display:block; font-size:11px; font-weight:700; margin-bottom:3px; }
+  .risk p{ font-size:10.1px; color:var(--ink-soft); line-height:1.45; }
+  .risk p .mit{ color:var(--green-700); font-weight:700; }
+
+  /* ================= MATRIZ ================= */
+  .matrix{ flex:1; display:flex; flex-direction:column; justify-content:center; min-height:0; }
+  .legend{ display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin-bottom:9px; flex-shrink:0; }
+  .legend span{ display:inline-flex; align-items:center; gap:6px; font-size:10px; font-weight:600; color:var(--ink-soft); }
+  .ldot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+  .ldot.g{ background:var(--green-600);} .ldot.a{ background:var(--amber);} .ldot.r{ background:var(--red);} .ldot.n{ background:var(--ink-faint);}
+  table.mx{ width:100%; border-collapse:separate; border-spacing:0; background:var(--white); border-radius:8px; overflow:hidden; box-shadow:var(--shadow-md); border:1px solid var(--border); table-layout:fixed; }
+  table.mx th{ text-align:left; font-size:9.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-faint); padding:9px 11px; border-bottom:1px solid var(--border); background:var(--green-50); vertical-align:bottom; }
+  table.mx th .cn{ display:block; font-family:'Inter Tight'; font-size:11.5px; font-weight:800; letter-spacing:-.01em; text-transform:none; color:var(--ink); }
+  table.mx th.prop{ background:var(--green-600); color:#D6F2E0; }
+  table.mx th.prop .cn{ color:#fff; }
+  table.mx th.prop .rib{ display:block; font-size:8.2px; letter-spacing:.1em; margin-bottom:3px; color:#B9E8CB; }
+  table.mx td{ padding:8px 11px; border-bottom:1px solid var(--hair); font-size:10.9px; color:var(--ink); vertical-align:top; line-height:1.38; }
+  table.mx tr:last-child td{ border-bottom:none; }
+  table.mx td.crit{ font-weight:700; color:var(--ink); font-size:11px; background:#FCFDFC; border-right:1px solid var(--hair); }
+  table.mx td.crit i{ display:block; font-style:normal; font-weight:500; color:var(--ink-faint); font-size:9px; margin-top:2px; }
+  table.mx td.prop{ background:var(--green-50); font-weight:600; border-left:1px solid var(--green-100); border-right:1px solid var(--green-100); }
+  table.mx tr:hover td{ background:#FAFCF9; }
+  table.mx tr:hover td.prop{ background:#E9F7EE; }
+  .badge{ display:inline-flex; align-items:flex-start; gap:5px; font-weight:700; }
+  .badge .ic{ flex-shrink:0; font-size:9.5px; line-height:1.4; }
+  .badge.ok{ color:var(--green-700); }
+  .badge.warn{ color:var(--amber); }
+  .badge.no{ color:var(--red); }
+  .badge.dash{ color:var(--ink-faint); font-weight:500; }
+  table.mx td .n{ font-weight:500; }
+
+  /* ================= SCORECARD ================= */
+  table.score{ width:100%; border-collapse:separate; border-spacing:0; background:var(--white); border-radius:8px; overflow:hidden; box-shadow:var(--shadow-md); border:1px solid var(--border); table-layout:fixed; }
+  table.score th{ text-align:center; font-size:9.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-faint); padding:9px 8px; border-bottom:1px solid var(--border); background:var(--green-50); }
+  table.score th.crit{ text-align:left; }
+  table.score th .cn{ display:block; font-family:'Inter Tight'; font-size:11.5px; font-weight:800; text-transform:none; letter-spacing:-.01em; color:var(--ink); }
+  table.score th.prop{ background:var(--green-600); color:#D6F2E0; }
+  table.score th.prop .cn{ color:#fff; }
+  table.score td{ padding:7px 8px; border-bottom:1px solid var(--hair); font-size:10.8px; text-align:center; vertical-align:middle; }
+  table.score tr:last-child td{ border-bottom:none; }
+  table.score td.crit{ text-align:left; font-weight:700; font-size:11px; background:#FCFDFC; border-right:1px solid var(--hair); }
+  table.score td.crit i{ display:block; font-style:normal; font-weight:500; color:var(--ink-faint); font-size:9px; margin-top:1px; }
+  table.score td.w{ font-family:'Inter Tight'; font-weight:800; font-size:11px; color:var(--green-700); background:#FCFDFC; }
+  table.score td.prop{ background:var(--green-50); border-left:1px solid var(--green-100); border-right:1px solid var(--green-100); }
+  table.score tr.tot td{ background:var(--green-900); color:#fff; border-bottom:none; padding:11px 8px; }
+  table.score tr.tot td.crit{ background:var(--green-900); color:#fff; font-family:'Inter Tight'; font-size:11.5px; }
+  table.score tr.tot .pct{ font-family:'Inter Tight'; font-weight:800; font-size:19px; letter-spacing:-.02em; }
+  table.score tr.tot .pt{ font-size:9px; color:#A9D6BA; display:block; margin-top:1px; }
+  table.score tr.tot .bar{ height:5px; border-radius:4px; background:rgba(255,255,255,.16); overflow:hidden; margin-top:6px; }
+  table.score tr.tot .bar i{ display:block; height:100%; background:var(--green-500); border-radius:4px; }
+  table.score tr.tot td.prop{ background:#0A2E19; }
+  table.score tr.tot td.prop .pct{ color:#5FE59A; }
+  .dots{ display:inline-flex; gap:2.5px; align-items:center; }
+  .dots i{ width:6px; height:6px; border-radius:50%; background:var(--hair); border:1px solid var(--border); }
+  .dots i.on{ background:var(--green-600); border-color:var(--green-600); }
+  .dots.a i.on{ background:var(--amber); border-color:var(--amber); }
+  .dots.r i.on{ background:var(--red); border-color:var(--red); }
+  .sv{ display:block; font-size:9.7px; color:var(--ink-soft); margin-top:3px; line-height:1.3; }
+
+  /* ================= MARCO / METODOLOGÍA ================= */
+  .frame{ flex:1; display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; min-height:0; align-content:start; }
+  .fcard{ background:var(--white); border:1px solid var(--border); border-radius:8px; padding:16px 18px; box-shadow:var(--shadow-md); }
+  .fcard .fnum{ font-family:'Inter Tight'; font-weight:800; font-size:11px; color:var(--green-700); letter-spacing:.1em; text-transform:uppercase; }
+  .fcard h4{ font-family:'Inter Tight'; font-weight:800; font-size:15px; margin:5px 0 8px; }
+  .fcard p{ font-size:10.8px; color:var(--ink-soft); line-height:1.5; }
+  .fcard .sc-list{ list-style:none; margin-top:9px; }
+  .fcard .sc-list li{ font-size:10.4px; padding:5px 0; border-bottom:1px solid var(--hair); display:flex; gap:8px; align-items:baseline; }
+  .fcard .sc-list li:last-child{ border-bottom:none; }
+  .fcard .sc-list li em{ font-style:normal; font-weight:800; font-size:9px; color:var(--green-700); flex:0 0 16px; }
+  .scale{ display:flex; gap:9px; margin-top:10px; }
+  .scale .s{ flex:1; border-radius:4px; padding:9px 10px; border:1px solid var(--border); }
+  .scale .s.g{ background:var(--green-50); border-color:var(--green-100); }
+  .scale .s.a{ background:var(--amber-bg); border-color:var(--amber-bd); }
+  .scale .s.r{ background:var(--red-bg); border-color:var(--red-bd); }
+  .scale .s b{ display:block; font-size:9.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; margin-bottom:3px; }
+  .scale .s.g b{ color:var(--green-700);} .scale .s.a b{ color:var(--amber);} .scale .s.r b{ color:var(--red);}
+  .scale .s p{ font-size:9.6px; line-height:1.4; color:var(--ink-soft); }
+
+  /* ================= CIERRE ================= */
+  .next-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+  .ncard{ background:var(--white); border:1px solid var(--border); border-radius:8px; padding:14px 16px; box-shadow:var(--shadow-sm); }
+  .ncard .ni{ width:26px; height:26px; border-radius:4px; background:var(--green-600); color:#fff; font-family:'Inter Tight'; font-weight:800; font-size:11px; display:flex; align-items:center; justify-content:center; margin-bottom:8px; }
+  .ncard b{ display:block; font-family:'Inter Tight'; font-size:12.5px; margin-bottom:4px; }
+  .ncard p{ font-size:10.2px; color:var(--ink-soft); line-height:1.45; }
+  .openq{ background:var(--amber-bg); border:1px solid var(--amber-bd); border-radius:4px; padding:14px 17px; }
+  .openq b{ font-family:'Inter Tight'; font-size:13px; }
+  .openq .f-list li::before{ background:var(--amber); }
+  .openq .f-list li{ font-size:10.3px; }
+
+  /* ================= NAV ================= */
+  /* La navegacion vive dentro del lienzo escalado: nunca se encima con el contenido */
+  .chrome{ position:absolute; top:0; left:0; width:1440px; height:900px; transform-origin:0 0;
+    transform: translate(var(--tx,0px), var(--ty,0px)) scale(var(--k,1)); z-index:12; pointer-events:none; }
+  .chrome > *{ pointer-events:auto; }
+  .progress{ position:absolute; top:0; left:0; height:3px; width:0; background:var(--green-600); transition:width .35s ease; }
+  .nav-pager{ position:absolute; left:50%; bottom:22px; transform:translateX(-50%); display:flex; align-items:center; gap:10px;
+    background: var(--ink); color:#fff; border-radius:4px; padding:7px 10px; box-shadow: var(--shadow-lg); font-size:12.5px; font-weight:700; letter-spacing:.02em; }
+  .nav-sep{ width:1px; height:16px; background:rgba(255,255,255,.2); }
+  .nav-lk{ cursor:pointer; user-select:none; font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:#B4CDBD; padding:0 3px; }
+  .nav-lk:hover{ color:#fff; }
+  .nav-pager button{ width:26px; height:26px; border-radius:3px; border:none; background:rgba(255,255,255,.12); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:14px; transition: background .2s ease; }
+  .nav-pager button:hover{ background: var(--green-600); }
+  .nav-pager button:disabled{ opacity:.3; cursor:default; }
+  .nav-pager button:disabled:hover{ background:rgba(255,255,255,.12); }
+  .nav-pager #pg-count{ min-width:50px; text-align:center; font-variant-numeric: tabular-nums; cursor:pointer; }
+  :focus-visible{ outline:2px solid var(--green-600); outline-offset:2px; }
+
+  .ovl{ position:fixed; inset:0; background:rgba(10,22,13,.88); z-index:40; display:none; padding:5vh 5vw; overflow:auto; }
+  .ovl.open{ display:block; }
+  .ovl h3{ font-family:'Inter Tight'; color:#fff; font-size:18px; margin-bottom:14px; display:flex; align-items:center; gap:12px; }
+  .ovl h3 span{ font-size:11px; font-weight:600; color:#A9D6BA; letter-spacing:.06em; text-transform:uppercase; }
+  .ovl-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:9px; }
+  .ovl-item{ background:#fff; border-radius:6px; padding:11px 12px; cursor:pointer; border:1.5px solid transparent; }
+  .ovl-item:hover{ border-color:var(--green-500); }
+  .ovl-item.cur{ border-color:var(--green-600); box-shadow:0 0 0 3px rgba(34,168,87,.3); }
+  .ovl-item .on{ font-family:'Inter Tight'; font-weight:800; font-size:10px; color:var(--green-700); }
+  .ovl-item .ot{ font-size:11px; font-weight:700; margin-top:2px; line-height:1.25; }
+
+  @media (max-width: 900px){
+    .index-wrap, .map-row, .frame, .metrics, .mcards, .two-col, .ucards, .next-grid{ grid-template-columns:1fr; }
+    .chrome{ position:fixed; width:auto; height:auto; inset:auto 0 0 0; transform:none !important; }
+    .sfoot{ position:static; margin-top:22px; padding-top:14px; border-top:1px solid var(--border); }
+    #s-cover .phone{ display:none; }
+    .slide{ width:100%; height:100%; transform:none !important; padding:8vw 6vw 16vw; overflow-y:auto; }
+    #s-cover{ padding:8vw 6vw 16vw; }
+    .verdict{ grid-template-columns:1fr; } .gauges{ border-left:none; padding-left:0; border-top:1px solid var(--hair); padding-top:12px; }
+    .ovl-grid{ grid-template-columns:repeat(2,1fr); }
+  }
+  @page{ size: A4 landscape; margin:0; }
+  @media print{
+    body{ overflow:visible; height:auto; background:#fff; }
+    .chrome, .ovl{ display:none !important; }
+    .deck{ height:auto; overflow:visible; }
+    .slide{ display:flex !important; position:relative; top:auto; left:auto; opacity:1 !important;
+      transform:none !important; zoom:.775; width:1440px; height:900px;
+      page-break-after:always; break-after:page; overflow:hidden; }
+    .slide:last-child{ page-break-after:auto; }
+    .brand{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  }
+
+
+  /* =====================================================================
+     ONE-PAGER — estructura de scroll vertical
+     Sustituye el sistema de láminas paginadas (.deck/.slide/.ovl/.nav-pager)
+     por secciones apiladas, cada una claramente separada.
+     ===================================================================== */
+
+  html{ scroll-behavior:smooth; }
+  body{ overflow:visible !important; height:auto !important; }
+
+  .page{ position:relative; width:100%; }
+
+  /* -------- navegación superior fija (misma esencia visual que .nav-pager) -------- */
+  .topnav{
+    position:fixed; top:0; left:0; right:0; z-index:50;
+    display:flex; align-items:center; justify-content:center;
+    padding:14px 20px;
+    pointer-events:none;
+  }
+  .topnav-inner{
+    pointer-events:auto;
+    display:flex; align-items:center; gap:4px;
+    background:var(--ink); border-radius:999px; padding:6px; box-shadow:var(--shadow-lg);
+    max-width:96vw; overflow-x:auto;
+  }
+  .topnav .brand.sm{ margin:0 10px 0 8px; opacity:.92; filter:brightness(0) invert(1); }
+  .navlink{
+    flex-shrink:0; font-size:11.5px; font-weight:700; letter-spacing:.02em; color:rgba(255,255,255,.6);
+    padding:8px 13px; border-radius:999px; text-decoration:none; transition:background .18s ease, color .18s ease;
+    white-space:nowrap;
+  }
+  .navlink:hover{ color:#fff; }
+  .navlink.active{ background:var(--green-600); color:#fff; }
+
+  .topprogress{ position:fixed; top:0; left:0; height:2.5px; width:0%; background:var(--green-600); z-index:60; transition:width .1s linear; }
+
+  /* -------- secciones -------- */
+  .section{
+    position:relative;
+    padding:150px 56px 110px;
+    max-width:1320px; margin:0 auto;
+  }
+  #s-cover{ padding-top:0; }
+  .section-alt{ background:var(--white); }
+  .section-alt-tint{ background:linear-gradient(180deg,var(--green-50),var(--bg)); }
+
+  .section-band{ width:100%; }
+  .section-band.white{ background:var(--white); }
+  .section-band.tint{ background:var(--green-50); }
+  .section-band.ink{ background:var(--green-900); }
+
+  .section-tag{
+    display:inline-flex; align-items:center; gap:10px; font-size:12px; font-weight:800; letter-spacing:.16em;
+    text-transform:uppercase; color:var(--ink-faint); margin-bottom:18px;
+  }
+  .section-tag b{ color:var(--green-700); }
+
+  .section-head{ margin-bottom:44px; max-width:900px; }
+  .section-head .h-lg{ font-size:38px; margin-top:8px; }
+  .section-head .sub{ font-size:16px; margin-top:12px; max-width:760px; }
+
+  .divider{
+    width:100%; height:1px; background:var(--border);
+  }
+
+  /* -------- portada -------- */
+  #s-cover{
+    min-height:100vh; display:flex; align-items:center;
+    padding-top:130px; padding-bottom:70px;
+  }
+  .cover-grid{ display:grid; grid-template-columns:1.15fr .85fr; gap:60px; align-items:center; width:100%; }
+  #s-cover .stat-row{ margin-top:30px; }
+
+  /* -------- gracias -------- */
+  #s6{
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    background:#fff; position:relative; overflow:hidden; padding:80px 40px;
+  }
+  .thanks-wrap{ text-align:center; position:relative; z-index:2; }
+  .thanks-title{
+    font-family:'Inter Tight'; font-weight:900; font-size:104px; letter-spacing:-.03em; color:var(--ink); line-height:1;
+    margin:26px 0 16px;
+  }
+  .thanks-title .dot{ color:var(--green-600); }
+  .thanks-sub{ font-size:17px; color:var(--ink-soft); font-weight:500; }
+  .thanks-chip{
+    position:absolute; width:96px; height:96px; border-radius:26px;
+    background:linear-gradient(160deg,#fff,var(--green-50));
+    box-shadow:0 18px 40px rgba(15,60,40,.14);
+    display:flex; align-items:center; justify-content:center; font-size:40px;
+    z-index:1;
+  }
+  .tc1{ top:8%; left:10%; }
+  .tc2{ top:14%; right:9%; }
+  .tc3{ bottom:12%; left:14%; }
+  .tc4{ bottom:10%; right:13%; }
+
+  /* -------- footer final -------- */
+  .final-foot{
+    padding:40px 56px 60px; max-width:1320px; margin:0 auto;
+    display:flex; align-items:center; justify-content:space-between; color:var(--ink-faint); font-size:11.5px;
+  }
+
+  @media (max-width: 980px){
+    .section{ padding:110px 22px 70px; }
+    .cover-grid{ grid-template-columns:1fr; gap:38px; }
+    .h-xl{ font-size:42px !important; }
+    .section-head .h-lg{ font-size:26px; }
+    .frame, .mcards, .metrics, .next-grid{ grid-template-columns:1fr !important; }
+    table.mx{ font-size:10px; }
+    .matrix-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    table.mx{ min-width:920px; }
+    .thanks-title{ font-size:56px; }
+    .thanks-chip{ width:64px; height:64px; font-size:26px; border-radius:18px; }
+    .topnav .brand.sm{ display:none; }
+    .ent-head{ flex-wrap:wrap; }
+    .ent-head .scale{ width:100% !important; }
+    .verdict{ grid-template-columns:1fr !important; }
+    .verdict .gauges{ border-left:none; padding-left:0; margin-top:16px; border-top:1px solid var(--hair); padding-top:16px; }
+    .cover-grid .phone{ margin:0 auto; }
+  }
+  @media (max-width: 560px){
+    .thanks-chip{ display:none; }
+  }
+
+  /* =====================================================================
+     IMPRESIÓN / EXPORTACIÓN A PDF
+     ===================================================================== */
+  @media print{
+    *{ -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+    html, body{ overflow:visible !important; height:auto !important; }
+    .topnav, .topprogress{ display:none !important; }
+    .section{ max-width:100%; }
+    #s-cover{ padding-top:40px; }
+    #s2, #s3, #s4, #s5, #s6{ break-before:page; }
+    #s6{ min-height:auto; padding-top:60px; padding-bottom:40px; }
+    table.mx tr{ break-inside:avoid; }
+    .fcard, .metric, .verdict, .mcard{ break-inside:avoid; }
+    .final-foot{ break-before:page; }
+  }
+
+
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="topprogress" id="topprogress"></div>
+  <nav class="topnav">
+    <div class="topnav-inner">
+      <div class="brand sm" role="img" aria-label="UiX + Banco Azteca"></div>
+      <a class="navlink" href="#s-cover">Portada</a>
+      <a class="navlink" href="#s2">Objetivo</a>
+      <a class="navlink" href="#s3">Beneficiario</a>
+      <a class="navlink" href="#s4">No beneficiario</a>
+      <a class="navlink" href="#s5">Conclusiones</a>
+      <a class="navlink" href="#s6">Gracias</a>
+    </div>
+  </nav>
+
+  <section class="section" id="s-cover">
+    <div class="cover-grid">
+      <div>
+        <div class="brand lg" role="img" aria-label="UiX + Banco Azteca"></div>
+        <div class="eyebrow" style="margin-top:26px;">BENCHMARK · UX DE PAGO DE CRÉDITOS</div>
+        <h1 class="h-xl" style="margin-top:14px;">Análisis de<br><span class="accent">pasarela</span><br>de pagos</h1>
+        <p class="sub" style="font-size:16.5px; max-width:600px; margin-top:16px;">Comparamos, con la misma vara, cómo paga su préstamo un cliente de Banco Azteca en los cinco canales más parecidos al nuestro — para ver, sin filtros, cuál le da más flexibilidad a la hora de pagar.</p>
+        <div class="stat-row">
+          <div class="stat"><b>5</b><span>CANALES ANALIZADOS</span></div>
+          <div class="stat"><b>2</b><span>ROLES: BENEFICIARIO / TERCERO</span></div>
+          <div class="stat"><b>7</b><span>SUBCATEGORÍAS DE UX</span></div>
+          <div class="stat"><b>70</b><span>CELDAS DE EVIDENCIA</span></div>
+        </div>
+        <div class="pill date-pill" style="margin-top:24px;">Julio 2026 · versión 3.0 · uso interno y cliente</div>
+      </div>
+
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="phone-status"><span>9:41</span><span>5G · 100%</span></div>
+          <div class="phone-h1">Elige cómo<br>quieres pagar</div>
+          <div class="phone-sub">Préstamo de <b style="color:#12160F">Ana L.</b> · pago semanal</div>
+          <div class="pm sel">
+            <div><b>Tarjeta en uso</b><span>Visa •••• 4821 · con 3D Secure</span></div>
+            <div class="rd"></div>
+          </div>
+          <div class="pm">
+            <div><b>Transferencia SPEI</b><span>Datos para depositar desde otro banco</span></div>
+            <div class="rd"></div>
+          </div>
+          <div class="pm">
+            <div><b>Efectivo en tienda</b><span>Código QR y de barras</span></div>
+            <div class="rd"></div>
+          </div>
+          <div class="amt">
+            <div class="total-row"><span>Pago semanal</span><b>$215.00</b></div>
+            <div class="total-row"><span>Comisión</span><b>$0.00</b></div>
+            <div class="big-price">Total $215.00</div>
+          </div>
+          <div class="cta">Continuar</div>
+          <div class="fineprint">Un mismo flujo para el titular y para quien paga por él.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt" id="s2">
+    <div class="section-head">
+      <div class="section-tag"><b>02</b> · Objetivo y metodología</div>
+      <h2 class="h-lg">No comparamos por comparar. Comparamos para pagar mejor.</h2>
+      <p class="sub">El objetivo es simple de decir y trabajoso de responder bien: <b>comparar el proceso de pago de nuestros créditos contra los canales más parecidos al nuestro</b>, identificar qué hace bien cada uno y dónde se traba, y llegar a una conclusión clara de <b>qué opción le da más flexibilidad al usuario para pagar</b> — sea el titular del crédito o alguien pagando por él.</p>
+    </div>
+
+    <div class="frame" style="margin-bottom:34px;">
+      <div class="fcard">
+        <div class="fnum">Evaluación heurística</div>
+        <h4>Contra principios, no contra gustos</h4>
+        <p>Cada decisión de diseño se contrasta contra principios de usabilidad probados, no contra lo que "se ve bien". Si algo genera fricción, tiene que poder explicarse.</p>
+      </div>
+      <div class="fcard">
+        <div class="fnum">Autenticación adaptativa al riesgo</div>
+        <h4>La fricción debe ganarse su lugar</h4>
+        <p>No todos los pasos merecen el mismo nivel de exigencia. La seguridad debe ser proporcional a lo que está en juego en cada transacción, no pareja para todos los casos.</p>
+      </div>
+      <div class="fcard">
+        <div class="fnum">Diseño universal / inclusivo</div>
+        <h4>Sin rutas alternas no hay pago fácil</h4>
+        <p>Una buena experiencia de pago ofrece más de un camino para llegar a la meta, sin degradar la experiencia de nadie en el proceso.</p>
+      </div>
+    </div>
+
+    <div class="divider" style="margin-bottom:30px;"></div>
+
+    <div class="ent-head" style="align-items:flex-end;">
+      <div style="max-width:640px;">
+        <div class="fnum" style="color:var(--green-700); font-family:'Inter Tight'; font-weight:800; font-size:11px; letter-spacing:.1em; text-transform:uppercase;">Cómo leemos cada canal</div>
+        <p class="sub" style="margin-top:6px;">La misma ficha, para los cinco canales y los dos roles: <b>A · cómo entra</b>, <b>B · cómo paga</b>, <b>C · qué evidencia recibe</b>. Si un canal no tiene esa etapa, se documenta el vacío — no se deja en blanco.</p>
+      </div>
+      <div class="scale" style="flex:0 0 auto; width:420px; margin-top:0;">
+        <div class="s g"><b>✓ Resuelto</b><p>Sin trámite ni intermediarios.</p></div>
+        <div class="s a"><b>! Con costo</b><p>Exige trámite, traslado o un tercero.</p></div>
+        <div class="s r"><b>✕ Bloqueado</b><p>No existe ruta para ese rol.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="s3">
+    <div class="ent-head" style="margin-bottom:10px;">
+      <div>
+        <div class="section-tag"><b>03</b> · Matriz maestra · Rol 1</div>
+        <h2 class="h-lg" style="margin-top:9px;">Beneficiario: los 5 canales, 7 subcategorías</h2>
+      </div>
+      <div><p class="sub" style="max-width:420px;">El titular puede pagar en los cinco canales. Lo que cambia es cuánto le cuesta.</p></div>
+    </div>
+    <div class="matrix">
+      <div class="legend">
+        <span><i class="ldot g"></i>Resuelto en el canal</span>
+        <span><i class="ldot a"></i>Posible, con costo o condición</span>
+        <span><i class="ldot r"></i>Bloqueado o ausente</span>
+        <span><i class="ldot n"></i>No aplica o sin dato en la fuente</span>
+      </div>
+      <div class="matrix-scroll">
+      <table class="mx">
+        <colgroup><col style="width:13%"><col style="width:17.4%"><col style="width:17.4%"><col style="width:17.4%"><col style="width:17.4%"><col style="width:17.4%"></colgroup>
+        <thead>
+          <tr>
+            <th>Subcategoría</th>
+            <th><span class="cn">App Azteca</span>Autoservicio propio</th>
+            <th><span class="cn">Sucursal</span>Ventanilla</th>
+            <th><span class="cn">PWA productivo</span>Liga web</th>
+            <th><span class="cn">PAX Cobranza</span>Gestor en campo</th>
+            <th class="prop"><span class="rib">NUESTRA PROPUESTA</span><span class="cn">PWA de pagos</span>Autoservicio abierto</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="crit">Autenticación<i>Cómo entra</i></td>
+            <td><span class="badge ok"><span class="ic">✓</span>Self service</span><span class="n">Desde su dispositivo entra a su aplicación</span></td>
+            <td><span class="badge warn"><span class="ic">!</span>La opera un asesor</span><span class="n">Cliente atendido presencial en sucursal</span></td>
+            <td><span class="badge ok"><span class="ic">✓</span>Self service</span><span class="n">El entrypoint depende de si llega por app o por liga de WhatsApp</span></td>
+            <td><span class="badge warn"><span class="ic">!</span>Gestor de cobranza</span><span class="n">Visita presencial al domicilio del cliente</span></td>
+            <td class="prop"><span class="badge ok"><span class="ic">✓</span>Self service</span><span class="n">Mismo patrón: entrypoint por app o por liga de WhatsApp</span></td>
+          </tr>
+          <tr>
+            <td class="crit">Datos solicitados<i>Número de datos</i></td>
+            <td><span class="badge warn"><span class="ic">!</span>2–3 inputs + biometría o contraseña</span><span class="n">OTP en verificación reforzada</span></td>
+            <td><span class="badge ok"><span class="ic">✓</span>1 input a elegir</span><span class="n">TAZ, Cliente Único, nombre o huella</span></td>
+            <td><span class="badge ok"><span class="ic">✓</span>4 inputs a elegir</span><span class="n">Nombre, fecha, 4 últimos dígitos del cliente único o correo</span></td>
+            <td><span class="badge ok"><span class="ic">✓</span>1 input</span><span class="n">Biometría con huella del dedo índice derecho</span></td>
+            <td class="prop"><span class="badge ok"><span class="ic">✓</span>2 inputs</span><span class="n">Nombre completo y fecha de nacimiento — si la liga viene de app o WhatsApp, se recuperan solos</span></td>
+          </tr>
+          <tr>
+            <td class="crit">Tipo de pago</td>
+            <td><span class="badge ok"><span class="ic">✓</span>7 tipos de pago</span><span class="n">Línea completa, por préstamo o pedido, semanal, a capital, liquidación, otra cantidad, alternativa</span></td>
+            <td><span class="badge ok"><span class="ic">✓</span>6 tipos de pago</span><span class="n">Puntual, requerido, sugerido, para liquidar, otra cantidad, desglose por pedido</span></td>
+            <td><span class="badge warn"><span class="ic">!</span>4 tipos de pago</span><span class="n">Requerido, sugerido, para liquidar, cantidad libre</span></td>
+            <td><span class="badge ok"><span class="ic">✓</span>4 tipos de pago</span><span class="n">Campañas, cobros normales, planes de reestructura y compromiso — con negociación en persona</span></td>
+            <td class="prop"><span class="badge ok"><span class="ic">✓</span>7 tipos de pago</span><span class="n">Línea completa, por préstamo o pedido, semanal/quincenal, a capital, liquidación total, otra cantidad, alternativa de pago</span></td>
+          </tr>
+          <tr>
+            <td class="crit">Métodos de pago<i>Con qué paga</i></td>
+            <td><span class="badge warn"><span class="ic">!</span>2 métodos</span><span class="n">Guardadito, y tarjeta de otro banco: debe ser débito, a nombre del titular, con posible monto mínimo y comisión</span></td>
+            <td><span class="badge no"><span class="ic">✕</span>2 métodos</span><span class="n">Efectivo y cheque, sin tarjeta</span></td>
+            <td><span class="badge warn"><span class="ic">!</span>2 métodos</span><span class="n">Cuentas de Banco Azteca, y tarjeta de crédito o débito de otros bancos — sin efectivo</span></td>
+            <td><span class="badge warn"><span class="ic">!</span>3 métodos</span><span class="n">Efectivo, transferencia SPEI manual, tarjeta con terminal física</span></td>
+            <td class="prop"><span class="badge ok"><span class="ic">✓</span>4 métodos</span><span class="n">Efectivo en tienda, cuenta de Banco Azteca, transferencia SPEI (manual), tarjeta de otros bancos</span></td>
+          </tr>
+          <tr>
+            <td class="crit">Datos de tarjeta</td>
+            <td><span class="badge dash">— Sin dato en la fuente</span></td>
+            <td><span class="badge dash">— No aplica</span></td>
+            <td><span class="badge warn"><span class="ic">!</span>11 campos</span><span class="n">Número, nombre, expiración, CVV + 7 campos de dirección — la captura más larga del benchmark</span></td>
+            <td><span class="badge ok"><span class="ic">✓</span>Sin captura manual</span><span class="n">Se ingresa en la terminal física del gestor; valida con chip, NIP o firma</span></td>
+            <td class="prop"><span class="badge ok"><span class="ic">✓</span>0 campos con cuenta propia</span><span class="n">Con tarjeta de otro banco sí pide 6 campos: nombre, número, expiración, CVV, correo y dirección</span></td>
+          </tr>
+          <tr>
+            <td class="crit">Guardado de tarjeta</td>
+            <td><span class="badge warn"><span class="ic">!</span>Sí, tarjetas propias</span><span class="pend">por confirmar</span><span class="n">Falta confirmar si también se guardan tarjetas de otros bancos</span></td>
+            <td><span class="badge dash">— No aplica</span></td>
+            <td><span class="badge dash">— Sin definir</span><span class="pend">por confirmar</span></td>
+            <td><span class="badge dash">— No aplica</span></td>
+            <td class="prop"><span class="badge ok"><span class="ic">✓</span>Sí, sin recaptura</span></td>
+          </tr>
+          <tr>
+            <td class="crit">Confirmación post pago</td>
+            <td><span class="badge warn"><span class="ic">!</span>Ticket in-app + compartir manual</span><span class="pend">por confirmar</span><span class="n">Falta confirmar si además se envía por otro medio</span></td>
+            <td><span class="badge no"><span class="ic">✕</span>Solo recibo impreso</span></td>
+            <td><span class="badge no"><span class="ic">✕</span>Sin pantalla ni ticket digital de éxito</span><span class="n">Llega un correo posterior al pago, pero no es de confirmación de éxito</span></td>
+            <td><span class="badge warn"><span class="ic">!</span>Ticket impreso</span></td>
+            <td class="prop"><span class="badge ok"><span class="ic">✓</span>Comprobante según el entrypoint</span><span class="n">Por EKT envía push-in-app; por PWA muestra comprobante digital</span></td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="foot"><b>Lectura —</b> con el catálogo de tipos de pago ya igualado a los 7 conceptos de App Azteca, la PWA de pagos es el único canal que resuelve en verde <b>las 7 subcategorías a la vez</b>: catálogo completo, 4 métodos sin hardware, identificación mínima y captura de tarjeta reducida a 0 campos cuando se paga con cuenta propia.</p>
+    </div>
+  </section>
+
+  <section class="section section-alt" id="s4">
+    <div class="ent-head" style="margin-bottom:10px;">
+      <div>
+        <div class="section-tag"><b>04</b> · Matriz maestra · Rol 2</div>
+        <h2 class="h-lg" style="margin-top:9px;">No beneficiario: quién puede pagar por otra persona</h2>
+      </div>
+      <div><p class="sub" style="max-width:420px;">Aquí es donde los canales se separan de verdad. Solo dos de los cinco tienen una ruta de pago real para un tercero.</p></div>
+    </div>
+    <div class="matrix">
+      <div class="legend">
+        <span><i class="ldot g"></i>Resuelto en el canal</span>
+        <span><i class="ldot a"></i>Posible, con costo o condición</span>
+        <span><i class="ldot r"></i>Bloqueado o ausente</span>
+        <span><i class="ldot n"></i>No aplica o sin dato en la fuente</span>
+      </div>
+      <div class="matrix-scroll">
+      <table class="mx">
+        <colgroup><col style="width:13%"><col style="width:17.4%"><col style="width:17.4%"><col style="width:17.4%"><col style="width:17.4%"><col style="width:17.4%"></colgroup>
+        <thead>
+          <tr>
+            <th>Subcategoría</th>
+            <th><span class="cn">App Azteca</span>Autoservicio propio</th>
+            <th><span class="cn">Sucursal</span>Ventanilla</th>
+            <th><span class="cn">PWA productivo</span>Liga web</th>
+            <th><span class="cn">PAX Cobranza</span>Gestor en campo</th>
+            <th class="prop"><span class="rib">NUESTRA PROPUESTA</span><span class="cn">PWA de pagos</span>Autoservicio abierto</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="crit">Ruta de pago<i>Cómo pagar el préstamo</i></td>
+            <td><span class="badge no"><span class="ic">✕</span>No existe</span><span class="n">No hay opción a pagar como invitado</span></td>
+            <td><span class="badge warn"><span class="ic">!</span>Condicionado</span><span class="n">Un tercero puede acudir con información previa del beneficiario</span></td>
+            <td><span class="badge ok"><span class="ic">✓</span>Sí, sin cuenta bancaria</span><span class="n">Un tercero puede pagar con los datos del beneficiario</span></td>
+            <td><span class="badge no"><span class="ic">✕</span>Sin ruta, solo seguimiento</span><span class="pend">por confirmar</span><span class="n">Flujo de cobranza de tercero no beneficiario</span></td>
+            <td class="prop"><span class="badge ok"><span class="ic">✓</span>Sí tiene ruta de pago</span><span class="n">Mismo flujo y experiencia que el beneficiario</span></td>
+          </tr>
+          <tr>
+            <td class="crit">Trámite previo<i>Para poder usar el canal</i></td>
+            <td><span class="badge no"><span class="ic">✕</span>8 pasos de enrolamiento</span><span class="n">Más INE y selfie obligatorias</span></td>
+            <td><span class="badge ok"><span class="ic">✓</span>Sin trámite</span><span class="n">Acude con información previa del beneficiario a ventanilla</span></td>
+            <td><span class="badge ok"><span class="ic">✓</span>Sin trámite</span></td>
+            <td><span class="badge no"><span class="ic">✕</span>No puede autenticarse</span><span class="pend">por confirmar</span></td>
+            <td class="prop"><span class="badge ok"><span class="ic">✓</span>Sin trámite</span><span class="n">Paga con los datos básicos del beneficiario</span></td>
+          </tr>
+          <tr>
+            <td class="crit">Verificación del pagador</td>
+            <td><span class="badge dash">— No aplica</span></td>
+            <td><span class="badge warn"><span class="ic">!</span>Sin verificación</span></td>
+            <td><span class="badge warn"><span class="ic">!</span>Sin verificación</span><span class="n">No se solicita validación de ningún tipo</span></td>
+            <td><span class="badge dash">— No aplica</span></td>
+            <td class="prop"><span class="badge ok"><span class="ic">✓</span>Sin verificación</span><span class="n">No se solicita validación de ningún tipo</span></td>
+          </tr>
+          <tr>
+            <td class="crit">Número de inputs</td>
+            <td><span class="badge dash">— No aplica</span></td>
+            <td><span class="badge ok"><span class="ic">✓</span>Sin inputs</span></td>
+            <td><span class="badge ok"><span class="ic">✓</span>4 campos</span><span class="n">Nombre, fecha, 4 últimos dígitos del cliente único o correo del beneficiario</span></td>
+            <td><span class="badge dash">— No aplica</span></td>
+            <td class="prop"><span class="badge ok"><span class="ic">✓</span>4 campos, sin Face ID</span><span class="n">El flujo más corto de los 5 competidores</span></td>
+          </tr>
+          <tr>
+            <td class="crit">Métodos de pago<i>Con qué paga</i></td>
+            <td><span class="badge dash">— No aplica</span></td>
+            <td><span class="badge ok"><span class="ic">✓</span>6 tipos de pago</span><span class="n">Puntual, requerido, sugerido, para liquidar, otra cantidad, desglose por pedido — con información previa del beneficiario</span></td>
+            <td><span class="badge warn"><span class="ic">!</span>4 tipos de pago</span><span class="n">Requerido, urgente, para liquidar, cantidad libre</span></td>
+            <td><span class="badge dash">— No aplica</span></td>
+            <td class="prop"><span class="badge ok"><span class="ic">✓</span>7 tipos de pago</span><span class="n">Línea completa, por préstamo o pedido, semanal/quincenal, a capital, liquidación total, otra cantidad, alternativa de pago</span></td>
+          </tr>
+          <tr>
+            <td class="crit">Datos de tarjeta</td>
+            <td><span class="badge dash">— No aplica</span></td>
+            <td><span class="badge dash">— No aplica</span></td>
+            <td><span class="badge warn"><span class="ic">!</span>11 campos</span><span class="n">Número, nombre, expiración, CVV + 7 campos de dirección</span></td>
+            <td><span class="badge dash">— No aplica</span></td>
+            <td class="prop"><span class="badge ok"><span class="ic">✓</span>0 campos con cuenta propia</span><span class="n">Con tarjeta de otro banco pide 6 campos: nombre, número, expiración, CVV, correo y dirección</span></td>
+          </tr>
+          <tr>
+            <td class="crit">Confirmación post pago</td>
+            <td><span class="badge dash">— No aplica</span></td>
+            <td><span class="badge no"><span class="ic">✕</span>Solo recibo impreso</span></td>
+            <td><span class="badge no"><span class="ic">✕</span>Sin pantalla ni ticket digital de éxito</span><span class="n">Correo posterior al pago, pero no es de éxito</span></td>
+            <td><span class="badge dash">— Sin evidencia confirmada</span><span class="pend">por confirmar</span></td>
+            <td class="prop"><span class="badge ok"><span class="ic">✓</span>Comprobante según el entrypoint</span><span class="n">Por EKT envía push-in-app; por PWA muestra comprobante digital</span></td>
+          </tr>
+          <tr>
+            <td class="crit">Veredicto de acceso</td>
+            <td><span class="badge no"><span class="ic">✕</span>Sin acceso</span></td>
+            <td><span class="badge warn"><span class="ic">!</span>Limitado</span><span class="n">Con barrera asistida por un humano</span></td>
+            <td><span class="badge ok"><span class="ic">✓</span>Con acceso</span></td>
+            <td><span class="badge no"><span class="ic">✕</span>Sin acceso</span><span class="pend">por confirmar</span></td>
+            <td class="prop"><span class="badge ok"><span class="ic">✓</span>Con acceso</span><span class="n">La cobertura más amplia de todos los competidores</span></td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="foot"><b>Lectura —</b> de cinco canales, solo dos abren una ruta de pago real para un tercero sin trámite: PWA productivo y la PWA de pagos. Entre esos dos, la diferencia ya no es solo el método de pago — con el catálogo actualizado, <b>la PWA de pagos también gana en tipos de pago (7 contra 4)</b> y es la única con confirmación de éxito verificable. Sucursal ofrece una ruta limitada asistida por un humano; App Azteca y PAX Cobranza siguen sin ninguna.</p>
+    </div>
+  </section>
+
+  <section class="section" id="s5">
+    <div class="section-head">
+      <div class="section-tag"><b>05</b> · Conclusiones</div>
+      <h2 class="h-lg" style="font-size:42px;">La PWA de pagos es la que más flexibilidad le da al usuario para pagar.</h2>
+      <p class="sub">Volviendo al objetivo: no se trataba de ver quién "gana" la tabla, sino quién le pone menos obstáculos a alguien que solo quiere pagar su préstamo — sea el titular o alguien pagando por él. Con las 7 subcategorías ya comparadas, la respuesta es consistente en las tres etapas del recorrido.</p>
+    </div>
+
+    <div class="metrics" style="margin-bottom:36px;">
+      <div class="metric">
+        <div class="lb">Métodos de pago</div>
+        <div class="vl">4 de 4 posibles</div>
+        <div class="dt">Efectivo en tienda, cuenta propia, transferencia y tarjeta de otro banco — sin necesitar hardware ni sucursal. Ningún otro canal cubre los cuatro.</div>
+      </div>
+      <div class="metric">
+        <div class="lb">Ligereza para entrar</div>
+        <div class="vl">2 datos</div>
+        <div class="dt">Nombre y fecha de nacimiento — y ni eso, si la liga ya viene de la app o de WhatsApp. El input más corto entre los canales de autoservicio.</div>
+      </div>
+      <div class="metric">
+        <div class="lb">Acceso para quien no es titular</div>
+        <div class="vl">Abierto</div>
+        <div class="dt">Mismo flujo, sin trámite ni enrolamiento previo. Solo un canal más lo logra, y con menos métodos de pago que nosotros.</div>
+      </div>
+    </div>
+
+    <div class="verdict" style="grid-template-columns:1fr 300px; margin-bottom:26px;">
+      <div>
+        <div class="vh"><b>El veredicto, en una frase</b></div>
+        <p>Los otros cuatro canales resuelven bien <b>una parte</b> del problema — catálogo de conceptos, identificación ligera, negociación humana o evidencia post pago — y cobran el resto con trámite, hardware o dependencia de una persona. La PWA de pagos es el único diseño que sostiene <b>acceso abierto, catálogo completo y métodos sin hardware</b> al mismo tiempo, para los dos roles, en un solo flujo.</p>
+        <p>Y lo hace sin letra chica: pagar con cuenta propia no pide ningún dato, y solo se piden campos adicionales cuando el usuario decide agregar una tarjeta de otro banco — su elección, no una condición del canal.</p>
+      </div>
+      <div class="gauges">
+        <div class="gauge"><b style="display:block; font-size:11px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.06em; margin-bottom:4px;">Cobertura de métodos y tipos de pago</b><div class="pill green" style="font-size:11.5px;">La más amplia del benchmark, en ambos roles</div></div>
+        <div class="gauge" style="margin-top:14px;"><b style="display:block; font-size:11px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.06em; margin-bottom:4px;">Siguiente foco de diseño</b><div class="pill" style="font-size:11.5px;">Simplificar el alta de tarjeta de otro banco</div></div>
+      </div>
+    </div>
+
+    <p class="foot" style="font-size:11px;"><b>Nota —</b> con la Parte 4 (No beneficiario) ya actualizada, el veredicto se sostiene para ambos roles: la PWA de pagos es, junto con PWA productivo, el único canal abierto para un tercero — y el único de los dos con catálogo completo de tipos de pago y confirmación de éxito verificable.</p>
+  </section>
+
+  <section class="section" id="s6">
+    <div class="thanks-chip tc1">💚</div>
+    <div class="thanks-chip tc2">✨</div>
+    <div class="thanks-chip tc3">💳</div>
+    <div class="thanks-chip tc4">🤝</div>
+    <div class="thanks-wrap">
+      <div class="brand lg" role="img" aria-label="UiX + Banco Azteca" style="margin:0 auto;"></div>
+      <div class="thanks-title">Gracias<span class="dot">.</span></div>
+      <div class="thanks-sub">Benchmark UX de pago de créditos · versión 3.0</div>
+    </div>
+  </section>
+
+  <div class="final-foot">
+    <div class="brand sm" role="img" aria-label="UiX + Banco Azteca"></div>
+    <div>Benchmark UX de pago de créditos · UiX + Banco Azteca · julio 2026 · v3.2</div>
+  </div>
+
+</div>
+<script>
+  // ---- one-pager: progreso de scroll + estado activo de navegación ----
+  const navlinks = Array.from(document.querySelectorAll('.navlink'));
+  const sections = navlinks.map(a => document.querySelector(a.getAttribute('href')));
+  const progressBar = document.getElementById('topprogress');
+
+  function onScroll(){
+    const doc = document.documentElement;
+    const scrollTop = doc.scrollTop || document.body.scrollTop;
+    const scrollH = doc.scrollHeight - doc.clientHeight;
+    const pct = scrollH > 0 ? (scrollTop / scrollH) * 100 : 0;
+    progressBar.style.width = pct + '%';
+
+    let current = 0;
+    const y = scrollTop + window.innerHeight * 0.3;
+    sections.forEach((sec, i) => {
+      if(sec && sec.offsetTop <= y) current = i;
+    });
+    navlinks.forEach((a,i) => a.classList.toggle('active', i === current));
+  }
+  window.addEventListener('scroll', onScroll, { passive:true });
+  window.addEventListener('resize', onScroll);
+  onScroll();
+
+</script>
+</body>
+</html>
